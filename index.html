@@ -12,7 +12,7 @@
          ========================================================================= -->
     <script>
         // MASUKKAN URL WEB APP ANDA DI SINI SETELAH DEPLOY DI GOOGLE APPS SCRIPT
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz_divRq6znFEzc1zJeXYIcV8jytpL26cpiO2VxQVO2yPYwFpmXxC6Vwv-AT14VcSEf/exec"; 
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxRq6DE9n3SDc-RestL0u8ScRAWcJT25I4jvTXBQByMVLDzyLDCWXd1dDFJYq5bjw05kQ/exec"; 
 
         // Fungsi Sinkronisasi: Ambil data dari Google Sheets ke LocalStorage
         async function syncFromCloud() {
@@ -2307,12 +2307,22 @@
                         if(log.presencePagi) {
                             let labelP = isPagiLate ? `<span style="color:#CC0000; font-weight:bold;">Pagi (${log.presencePagi}) - Terlambat</span>` : `Pagi (${log.presencePagi})`;
                             waktu.push(labelP);
-                            fotoHtml += `<div style="margin-bottom:8px;"><b>Pagi:</b><br><img src="${log.fotoPagi}" width="120" style="border-radius:8px; border:2px solid ${isPagiLate ? '#CC0000' : '#ccc'}; cursor:pointer;" onclick="bukaViewerDokumen('${u.email}', '${todayStr}', 'pagi')" title="Klik untuk perbesar"></div>`;
+                            fotoHtml += `<div style="margin-bottom:8px;">
+                                <b>Pagi:</b><br>
+                                <a href="${log.fotoPagi}" target="_blank" style="display:inline-block; margin-top:4px; padding:8px 12px; background-color:#f8f9fa; border-radius:8px; border:2px solid ${isPagiLate ? '#CC0000' : '#ccc'}; text-decoration:none; color:#333; font-size:12px; font-weight:bold;">
+                                    📸 Buka Foto
+                                </a>
+                            </div>`;
                         }
                         if(log.presenceSore) {
                             let labelS = isSoreLate ? `<span style="color:#CC0000; font-weight:bold;">Sore (${log.presenceSore}) - Terlambat</span>` : `Sore (${log.presenceSore})`;
                             waktu.push(labelS);
-                            fotoHtml += `<div><b>Sore:</b><br><img src="${log.fotoSore}" width="120" style="border-radius:8px; border:2px solid ${isSoreLate ? '#CC0000' : '#ccc'}; cursor:pointer;" onclick="bukaViewerDokumen('${u.email}', '${todayStr}', 'sore')" title="Klik untuk perbesar"></div>`;
+                            fotoHtml += `<div style="margin-bottom:8px;">
+                                <b>Sore:</b><br>
+                                <a href="${log.fotoSore}" target="_blank" style="display:inline-block; margin-top:4px; padding:8px 12px; background-color:#f8f9fa; border-radius:8px; border:2px solid ${isSoreLate ? '#CC0000' : '#ccc'}; text-decoration:none; color:#333; font-size:12px; font-weight:bold;">
+                                    📸 Buka Foto
+                                </a>
+                            </div>`;
                         }
                         tbody.innerHTML += `<tr><td>${u.nama}</td><td>${waktu.join('<br>')}</td><td>${fotoHtml}</td></tr>`;
                     }
@@ -2334,13 +2344,24 @@
                     let lb = u.logs[todayStr].logbook;
                     let isLbLate = lb.isLate || isLateStr(lb.waktu);
                     let lateTag = isLbLate ? '<br><span style="color:#CC0000; font-weight:bold; font-size: 0.8rem;">(Terlambat)</span>' : '';
-                    let docHtml = lb.fileData 
-                        ? (lb.fileData.startsWith('data:image') 
-                            ? `<img src="${lb.fileData}" width="70" style="border-radius:6px; cursor:pointer; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); ${isLbLate ? 'border:2px solid #CC0000;' : ''}" onclick="bukaViewerDokumen('${u.email}', '${todayStr}', 'logbook')" title="Lihat Dokumen">`
-                            : `<button class="btn-action-small ${isLbLate ? 'btn-red' : 'btn-orange'}" style="box-shadow: 0 4px 0 ${isLbLate ? '#B91C1C' : 'var(--color-bps-orange-dark)'};" onclick="bukaViewerDokumen('${u.email}', '${todayStr}', 'logbook')">👁️ Baca Dokumen</button>`)
-                        : `<span style="font-size:0.8rem; font-weight:700;">${lb.fileNama}</span>`;
                     
-                    tbody.innerHTML += `<tr><td>${u.nama}${lateTag}</td><td>${lb.pemberi}</td><td>${lb.tugas}</td><td style="max-width:250px; white-space:normal;">${lb.detail}</td><td>${docHtml}</td></tr>`;
+                    // --- PERBAIKAN 1: Tombol Anti-Error CORB Google Drive ---
+                    let docHtml = `<a href="${lb.fileData}" target="_blank" class="btn-action-small ${isLbLate ? 'btn-red' : 'btn-orange'}" style="box-shadow: 0 4px 0 ${isLbLate ? '#B91C1C' : 'var(--color-bps-orange-dark)'}; text-decoration:none; display:inline-block;">👁️ Buka Dokumen</a>`;
+                    
+                    // --- PERBAIKAN 2: Coding Pencetak Tanggal & Waktu Rapi ---
+                    let tanggalRapi = formatTanggalRapi(todayStr, lb.waktu);
+                    
+                    // --- PERBAIKAN 3: Memasukkan tanggalRapi ke dalam HTML Tabel (Di bawah Nama) ---
+                    tbody.innerHTML += `<tr>
+                        <td>
+                            <b>${u.nama}</b>${lateTag}
+                            <br><span style="font-size: 0.75rem; color: #555;">${tanggalRapi}</span>
+                        </td>
+                        <td>${lb.pemberi}</td>
+                        <td>${lb.tugas}</td>
+                        <td style="max-width:250px; white-space:normal;">${lb.detail}</td>
+                        <td>${docHtml}</td>
+                    </tr>`;
                 }
             });
             if(count === 0) tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada logbook hari ini.</td></tr>';
@@ -2477,6 +2498,27 @@
             history.replaceState({view: 'loginPage'}, null, "");
             updateToggleVisibility('loginPage');
         };
+
+        function formatTanggalRapi(tanggalMentah, waktuAsli) {
+            let d = new Date(tanggalMentah);
+            
+            // Jika data gagal dibaca sistem, tampilkan apa adanya untuk menghindari error
+            if (isNaN(d.getTime())) return tanggalMentah; 
+
+            // Ubah ke format Indonesia: "Sabtu, 16 Mei 2026"
+            let opsi = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            let tanggalIndo = d.toLocaleDateString('id-ID', opsi);
+
+            // Proses jam: Gunakan variabel waktuAsli dari logbook jika ada
+            let waktuIndo = "";
+            if (waktuAsli && waktuAsli !== "") {
+                // Ganti titik dua (08:30:15) menjadi titik (08.30.15)
+                waktuIndo = ` (${waktuAsli.replace(/:/g, '.')})`;
+            }
+
+            return tanggalIndo + waktuIndo;
+        }
+
     </script>
 </body>
 </html>

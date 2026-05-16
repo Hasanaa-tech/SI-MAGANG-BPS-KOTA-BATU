@@ -12,7 +12,7 @@
          ========================================================================= -->
     <script>
         // MASUKKAN URL WEB APP ANDA DI SINI SETELAH DEPLOY DI GOOGLE APPS SCRIPT
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxO2qnqc-OoAQ0XBOH-veofhV7WLpA_-bTb7DOccWDm23JpMkmsxapZUGavjVEhr2bnEg/exec"; 
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwyMRbyPHlFGbkUC4BcoG7ztGw5C4drQweWo2BR2ETPuC5zk0UH4l43wWUzgZvB1qF_Tg/exec"; 
 
         // Fungsi Sinkronisasi: Ambil data dari Google Sheets ke LocalStorage
         async function syncFromCloud() {
@@ -98,6 +98,39 @@
                 });
             }
         };
+
+        // Fungsi Universal untuk menembak File/Foto ke Google Drive
+        async function uploadFileKeDrive(base64String, fileName, mimeType) {
+            try {
+                console.log(`[Upload] Sedang mengunggah file ${fileName}...`);
+                
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8' 
+                    },
+                    body: JSON.stringify({
+                        action: 'uploadFile',
+                        base64: base64String,
+                        fileName: fileName,
+                        mimeType: mimeType
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.status === "success") {
+                    console.log(`[Upload Sukses] Link File: ${result.url}`);
+                    return result.url; 
+                } else {
+                    console.error("Gagal dari server:", result.message);
+                    return null;
+                }
+            } catch (error) {
+                console.error("Gagal melakukan request upload:", error);
+                return null;
+            }
+        }
 
         // Jalankan sinkronisasi saat aplikasi dimuat
         window.addEventListener('DOMContentLoaded', syncFromCloud);
@@ -1350,7 +1383,8 @@
         function showSuccessOverlay(overlayId, msgId, message) { document.getElementById(msgId).innerHTML = message; document.getElementById(overlayId).classList.add('active'); }
         function closeSuccess(overlayId) { document.getElementById(overlayId).classList.remove('active'); }
 
-        function savePresence(type) {
+                // UBAH MENJADI ASYNC FUNCTION AGAR BISA MENUNGGU PROSES UPLOAD
+        async function savePresence(type) {
             const video = document.getElementById('videoElement');
             if(!video.srcObject) return alert("Kamera belum aktif!");
             const canvas = document.getElementById('photoCanvas');
@@ -1361,7 +1395,7 @@
 
             const now = new Date(); const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
             const timeString = now.toLocaleTimeString();
-            const dateStr = `${days[now.getDay()]}, ${now.toLocaleDateString()} | Jam: ${timeString}`;
+            const dateStr = `${days[now.getDay()]} , ${now.toLocaleDateString()} | Jam: ${timeString}`;
             const userStr = `👤 ${currentUser.nama} (${currentUser.nim})`;
             const isLate = now.getHours() >= 21;
 
@@ -1375,30 +1409,54 @@
             ctx.fillStyle = "#F59E0B"; 
             ctx.fillText(`📍 ${locStr}`, 30, canvas.height - 35);
 
+            // 1. Ambil data gambar base64 asli dari kamera
             const photoDataUrl = canvas.toDataURL('image/jpeg');
             const todayStr = getTodayStr();
             if(!currentUser.logs[todayStr]) currentUser.logs[todayStr] = {};
             
+            // 2. Beri indikasi loading kepada user agar tahu foto sedang diunggah ke Drive cloud
+            document.getElementById('presenceSuccessMsg').innerHTML = "⏳ Mohon tunggu, foto presensi sedang diunggah ke Google Drive...";
+            document.getElementById('presenceSuccessOverlay').classList.add('active');
+
+            // 3. Rangkai nama file unik (Contoh: Presensi_Pagi_ahmad_17181920.jpg)
+            let username = currentUser.email.split('@')[0];
+            let namaFileDrive = `Presensi_${type}_${username}_${now.getTime()}.jpg`;
+
+            // 4. Kirim ke Google Drive via fungsi uploadFileKeDrive yang sudah dibuat sebelumnya
+            let linkDrive = await uploadFileKeDrive(photoDataUrl, namaFileDrive, 'image/jpeg');
+
+            // 5. Cek jika upload gagal, hentikan proses agar memori browser tidak terbebani base64 rusak
+            if (!linkDrive) {
+                document.getElementById('presenceSuccessOverlay').classList.remove('active');
+                alert("⚠️ Gagal mengunggah foto ke Google Drive cloud. Silakan coba presensi kembali.");
+                return;
+            }
+            
+            // 6. Jika sukses, simpan LINK Google Drive-nya (Bukan teks base64 panjang lagi!)
             if(type === 'Pagi') { 
                 currentUser.logs[todayStr].presencePagi = timeString; 
-                currentUser.logs[todayStr].fotoPagi = photoDataUrl; 
+                currentUser.logs[todayStr].fotoPagi = linkDrive; // <-- DI SINI PERUBAHANNYA (HANYA SIMPAN LINK)
                 currentUser.logs[todayStr].lokasiPagi = currentAddress; 
                 currentUser.logs[todayStr].isPagiLate = isLate;
             }
             if(type === 'Sore') { 
                 currentUser.logs[todayStr].presenceSore = timeString; 
-                currentUser.logs[todayStr].fotoSore = photoDataUrl; 
+                currentUser.logs[todayStr].fotoSore = linkDrive; // <-- DI SINI PERUBAHANNYA (HANYA SIMPAN LINK)
                 currentUser.logs[todayStr].lokasiSore = currentAddress; 
                 currentUser.logs[todayStr].isSoreLate = isLate;
             }
             
+            // 7. Simpan perubahan ke localStorage & kirim otomatis ke Google Sheets central
             localStorage.setItem(currentUser.email, JSON.stringify(currentUser));
             recordActivity(currentUser.email, currentUser.nama, `Melakukan Presensi ${type}`);
-            showSuccessOverlay('presenceSuccessOverlay', 'presenceSuccessMsg', `📸 Cekrek! Foto presensi ${type} berhasil terekam.<br>Watermark otomatis terpasang.`);
+            
+            // 8. Tampilkan overlay sukses final
+            showSuccessOverlay('presenceSuccessOverlay', 'presenceSuccessMsg', `📸 Cekrek! Foto presensi ${type} berhasil terekam dan tersimpan langsung di Google Drive.<br>Watermark otomatis terpasang.`);
             updateDashboardStats();
         }
 
-        function saveLogbook() {
+        // UBAH MENJADI ASYNC AGAR BISA MENUNGGU PROSES UPLOAD
+        async function saveLogbook() {
             const pemberi = document.getElementById('logPemberi').value;
             const tugas = document.getElementById('logTugasDiberi').value;
             const detail = document.getElementById('logTugasDikerjakan').value;
@@ -1408,27 +1466,62 @@
             if(!file) return alert("Peringatan: Dokumen Bukti Visual (PDF/Image) belum terlampir!");
 
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const fileData = e.target.result;
+            
+            // JADIKAN READER.ONLOAD SEBAGAI ASYNC FUNCTION
+            reader.onload = async function(e) {
+                const base64Data = e.target.result;
                 const todayStr = getTodayStr();
                 const now = new Date();
                 
+                // Tampilkan loading screen (opsional tapi disarankan)
+                document.getElementById('logbookSuccessMsg').innerHTML = "⏳ Mohon tunggu, dokumen logbook sedang diunggah ke Google Drive...";
+                document.getElementById('logbookSuccessOverlay').classList.add('active');
+
+                // Ekstrak ekstensi & buat nama unik
+                let ekstensi = file.name.split('.').pop();
+                let username = currentUser.email.split('@')[0];
+                let namaFileDrive = `Logbook_${username}_${now.getTime()}.${ekstensi}`;
+
+                // Panggil fungsi upload file ke Google Drive (pastikan fungsi uploadFileKeDrive sudah ada di script Anda)
+                let linkDrive = await uploadFileKeDrive(base64Data, namaFileDrive, file.type);
+
+                // Jika upload gagal, hentikan proses
+                if (!linkDrive) {
+                    document.getElementById('logbookSuccessOverlay').classList.remove('active');
+                    alert("⚠️ Gagal mengunggah dokumen logbook ke cloud. Silakan coba lagi.");
+                    return;
+                }
+                
+                // Jika sukses, susun data logbook dengan linkDrive sebagai fileData
                 if(!currentUser.logs[todayStr]) currentUser.logs[todayStr] = {};
                 currentUser.logs[todayStr].logbook = { 
-                    pemberi: pemberi, tugas: tugas, detail: detail, 
-                    fileNama: file.name, fileData: fileData, fileType: file.type,
+                    pemberi: pemberi, 
+                    tugasDiberi: tugas,  // Perhatikan: Sesuaikan key dengan code.gs (tugasDiberi)
+                    tugasDikerjakan: detail, // Perhatikan: Sesuaikan key dengan code.gs (tugasDikerjakan)
+                    fileNama: file.name, 
+                    fileData: linkDrive, // <-- INI YANG PALING PENTING, HANYA SIMPAN LINK GOOGLE DRIVE
+                    fileType: file.type,
                     waktu: now.toLocaleTimeString(),
                     isLate: now.getHours() >= 21
                 };
                 
+                // Simpan ke local storage (interseptor otomatis melempar ke sheet)
                 localStorage.setItem(currentUser.email, JSON.stringify(currentUser));
                 recordActivity(currentUser.email, currentUser.nama, `Mengirim Logbook Harian`);
-                showSuccessOverlay('logbookSuccessOverlay', 'logbookSuccessMsg', `✅ Dokumen Logbook Terekam.<br>Lampiran tersimpan: <b>${file.name}</b>`);
                 
-                document.getElementById('logPemberi').value = ''; document.getElementById('logTugasDiberi').value = ''; 
-                document.getElementById('logTugasDikerjakan').value = ''; document.getElementById('logBuktiFile').value = '';
+                // Tampilkan sukses overlay dengan link file
+                showSuccessOverlay('logbookSuccessOverlay', 'logbookSuccessMsg', `✅ Dokumen Logbook Terekam di Cloud.<br>Lampiran tersimpan: <b>${file.name}</b>`);
+                
+                // Reset form
+                document.getElementById('logPemberi').value = ''; 
+                document.getElementById('logTugasDiberi').value = ''; 
+                document.getElementById('logTugasDikerjakan').value = ''; 
+                document.getElementById('logBuktiFile').value = '';
+                
                 updateDashboardStats();
             };
+            
+            // Mulai membaca file
             reader.readAsDataURL(file);
         }
 

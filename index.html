@@ -12,7 +12,7 @@
          ========================================================================= -->
     <script>
         // MASUKKAN URL WEB APP ANDA DI SINI SETELAH DEPLOY DI GOOGLE APPS SCRIPT
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpriuoGD3oTPBuGlCBlvKj5BFBSuiELl4wUMRr5k8cDzMxYYeqwrGXl1N9BEfGhIUHgg/exec"; 
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz_divRq6znFEzc1zJeXYIcV8jytpL26cpiO2VxQVO2yPYwFpmXxC6Vwv-AT14VcSEf/exec"; 
 
         // Fungsi Sinkronisasi: Ambil data dari Google Sheets ke LocalStorage
         async function syncFromCloud() {
@@ -1496,8 +1496,8 @@
                 if(!currentUser.logs[todayStr]) currentUser.logs[todayStr] = {};
                 currentUser.logs[todayStr].logbook = { 
                     pemberi: pemberi, 
-                    tugasDiberi: tugas,  // Perhatikan: Sesuaikan key dengan code.gs (tugasDiberi)
-                    tugasDikerjakan: detail, // Perhatikan: Sesuaikan key dengan code.gs (tugasDikerjakan)
+                    tugas: tugas,  // Perhatikan: Sesuaikan key dengan code.gs (tugasDiberi)
+                    detail: detail, // Perhatikan: Sesuaikan key dengan code.gs (tugasDikerjakan)
                     fileNama: file.name, 
                     fileData: linkDrive, // <-- INI YANG PALING PENTING, HANYA SIMPAN LINK GOOGLE DRIVE
                     fileType: file.type,

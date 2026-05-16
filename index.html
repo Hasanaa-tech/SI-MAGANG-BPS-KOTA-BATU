@@ -778,6 +778,7 @@
                                     <th><input type="checkbox" onchange="toggleAllCheckboxes(this, 'chk-presensi')" title="Pilih Semua"></th>
                                     <th>Tanggal</th>
                                     <th>Nama Peserta</th>
+                                    <th>Instansi</th>
                                     <th>Sesi & Jam</th>
                                     <th>Alamat & Lokasi (GPS)</th>
                                     <th>Foto Presensi</th>
@@ -1228,6 +1229,15 @@
 
             for (let i = 0; i < firstDay; i++) { grid.innerHTML += `<div class="calendar-day day-inactive"></div>`; }
 
+            // --- DEKLARASI PERIODE MAGANG (AWAL & AKHIR) ---
+            const magangStart = new Date(currentUser.startDate || '2000-01-01');
+            magangStart.setHours(0, 0, 0, 0); 
+
+            // Tambahan batas akhir magang
+            const magangEnd = new Date(currentUser.endDate || '2099-12-31');
+            magangEnd.setHours(23, 59, 59, 999);
+            // --------------------------------------------------
+
             for (let d = 1; d <= daysInMonth; d++) {
                 const padM = String(start.getMonth()+1).padStart(2,'0'); const padD = String(d).padStart(2,'0');
                 const dateKey = `${start.getFullYear()}-${padM}-${padD}`;
@@ -1236,11 +1246,22 @@
                 const currentDate = new Date(start.getFullYear(), start.getMonth(), d);
                 const dayOfWeek = currentDate.getDay(); 
                 
-                let statusClass = 'status-red'; 
-                if(log.presencePagi && log.presenceSore && log.logbook) statusClass = 'status-green'; 
-                else if(log.presencePagi || log.presenceSore || log.logbook) statusClass = 'status-yellow'; 
+                // 1. Default kalender adalah NETRAL
+                let statusClass = 'day-neutral'; 
 
-                if(dayOfWeek === 0 || dayOfWeek === 6) statusClass = 'day-neutral'; 
+                // 2. Jika hari tersebut BUKAN akhir pekan DAN berada di dalam rentang awal s/d akhir magang
+                // (Tidak lagi memedulikan apakah hari itu sudah terlewati atau di masa depan)
+                if (dayOfWeek !== 0 && dayOfWeek !== 6 && currentDate >= magangStart && currentDate <= magangEnd) {
+                    
+                    statusClass = 'status-red'; // Set default merah untuk seluruh periode magang
+                    
+                    // Cek kelengkapan tugas: hijau jika lengkap, kuning jika hanya sebagian (parsial)
+                    if(log.presencePagi && log.presenceSore && log.logbook) {
+                        statusClass = 'status-green'; 
+                    } else if(log.presencePagi || log.presenceSore || log.logbook) {
+                        statusClass = 'status-yellow'; 
+                    }
+                } 
 
                 grid.innerHTML += `<div class="calendar-day ${statusClass}" title="${dateKey}">${d}</div>`;
             }
@@ -1715,9 +1736,13 @@
                             }
                             
                             let val = encodeURIComponent(JSON.stringify({email: u.email, date: dateStr}));
+                            
+                            // Menentukan gaya baris merah jika ada keterlambatan presensi (di atas jam 21.00)
+                            let rowStyle = (isPagiLate || isSoreLate) ? 'style="background-color: rgba(255, 0, 0, 0.1);"' : '';                            
+                            
                             tbodyPres.innerHTML += `<tr>
                                 <td><input type="checkbox" class="chk-presensi" value="${val}"></td>
-                                <td>${dateStr}</td><td>${u.nama}</td><td>${wHtml}</td><td style="white-space:normal; max-width:200px;">${log.lokasiPagi || log.lokasiSore || '-'}</td>
+                                <td>${dateStr}</td><td>${u.nama}</td><td>${u.instansi || '-'}</td><td>${wHtml}</td><td style="white-space:normal; max-width:200px;">${log.lokasiPagi || log.lokasiSore || '-'}</td>
                                 <td>${photoHtml}</td>
                                 <td class="action-cell">
                                     <button class="btn-action-small btn-blue" onclick="openEditPresensi('${u.email}', '${dateStr}')">✏️ Edit</button>

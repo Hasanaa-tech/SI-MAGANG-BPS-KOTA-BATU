@@ -1820,12 +1820,12 @@
                             if(log.presencePagi) {
                                 let labelP = isPagiLate ? `<span style="color:#CC0000; font-weight:bold;">Pagi (${log.presencePagi}) - Terlambat</span>` : `Pagi (${log.presencePagi})`;
                                 wHtml += `${labelP}<br>`;
-                                photoHtml += `<img src="${log.fotoPagi}" width="60" style="border-radius:8px; margin-bottom:5px; cursor:pointer; ${isPagiLate ? 'border:2px solid #CC0000;' : ''}" onclick="bukaViewerDokumen('${u.email}', '${dateStr}', 'pagi')" title="Lihat Foto Pagi">`;
+                                photoHtml += `<a href="${log.fotoPagi}" target="_blank" class="btn-action-small" style="background-color:#f8f9fa; color:#333; border:2px solid ${isPagiLate ? '#CC0000' : '#ccc'}; text-decoration:none; padding:4px 8px; border-radius:4px; display:inline-block; margin-bottom:4px;">📸 Lihat Pagi</a>`;
                             }
                             if(log.presenceSore) {
                                 let labelS = isSoreLate ? `<span style="color:#CC0000; font-weight:bold;">Sore (${log.presenceSore}) - Terlambat</span>` : `Sore (${log.presenceSore})`;
                                 wHtml += `${labelS}`;
-                                photoHtml += `<img src="${log.fotoSore}" width="60" style="border-radius:8px; cursor:pointer; ${isSoreLate ? 'border:2px solid #CC0000;' : ''}" onclick="bukaViewerDokumen('${u.email}', '${dateStr}', 'sore')" title="Lihat Foto Sore">`;
+                                photoHtml += `<a href="${log.fotoSore}" target="_blank" class="btn-action-small" style="background-color:#f8f9fa; color:#333; border:2px solid ${isSoreLate ? '#CC0000' : '#ccc'}; text-decoration:none; padding:4px 8px; border-radius:4px; display:inline-block;">📸 Lihat Sore</a>`;
                             }
                             
                             let val = encodeURIComponent(JSON.stringify({email: u.email, date: dateStr}));
@@ -1852,11 +1852,9 @@
                         let lateTag = isLbLate ? '<br><span style="color:#CC0000; font-weight:bold; font-size: 0.8rem;">(Terlambat)</span>' : '';
 
                         let docHtml = lb.fileData 
-                            ? (lb.fileData.startsWith('data:image') 
-                                ? `<img src="${lb.fileData}" width="70" style="border-radius:6px; cursor:pointer; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); ${isLbLate ? 'border: 2px solid #CC0000;' : ''}" onclick="bukaViewerDokumen('${u.email}', '${dateStr}', 'logbook')" title="Lihat Dokumen">`
-                                : `<button class="btn-action-small ${isLbLate ? 'btn-red' : 'btn-orange'}" style="box-shadow: 0 4px 0 ${isLbLate ? '#B91C1C' : 'var(--color-bps-orange-dark)'};" onclick="bukaViewerDokumen('${u.email}', '${dateStr}', 'logbook')">👁️ Baca Dokumen</button>`)
-                            : `<span style="font-size:0.8rem; font-weight:700;">${lb.fileNama}</span>`;
-                        
+                            ? `<a href="${lb.fileData}" target="_blank" class="btn-action-small ${isLbLate ? 'btn-red' : 'btn-orange'}" style="box-shadow: 0 4px 0 ${isLbLate ? '#B91C1C' : 'var(--color-bps-orange-dark)'}; text-decoration:none; display:inline-block;">👁️ Buka Dokumen</a>`
+                            : `<span style="font-size:0.8rem; font-weight:700;">${lb.fileNama || 'Tidak ada file'}</span>`;
+
                         let val = encodeURIComponent(JSON.stringify({email: u.email, date: dateStr}));
                         tbodyLog.innerHTML += `<tr>
                             <td><input type="checkbox" class="chk-logbook" value="${val}"></td>

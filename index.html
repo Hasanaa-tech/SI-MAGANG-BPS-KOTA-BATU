@@ -12,7 +12,7 @@
          ========================================================================= -->
     <script>
         // MASUKKAN URL WEB APP ANDA DI SINI SETELAH DEPLOY DI GOOGLE APPS SCRIPT
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxRq6DE9n3SDc-RestL0u8ScRAWcJT25I4jvTXBQByMVLDzyLDCWXd1dDFJYq5bjw05kQ/exec"; 
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0tlTIp0GwyWHnSqxkgx_27E3Y5LB9Y2TyvcfOXMl6SDvDDdPWLuJObK7QvLrJB_Mv0A/exec"; 
 
         // Fungsi Sinkronisasi: Ambil data dari Google Sheets ke LocalStorage
         async function syncFromCloud() {
@@ -632,7 +632,7 @@
                     </div>
 
                     <div id="locationInfo" class="info-badge badge-fail">Sedang Mencari Satelit GPS...</div>
-                    <p style="font-size: 0.95rem; color: var(--color-text-muted); font-weight: 600; margin-bottom: 30px;">Kamera aktif dari mana saja. Bukti foto otomatis menyertakan Cap Waktu & Lokasi Satelit (Watermark).</p>
+                    <p style="font-size: 0.95rem; color: var(--color-text-muted); font-weight: 600; margin-bottom: 30px;">Bukti foto otomatis menyertakan Cap Waktu & Lokasi Satelit (Watermark).</p>
                     
                     <div class="camera-box" id="cameraView">
                         <div class="scanner-line" id="scannerEffect"></div>
@@ -1415,7 +1415,7 @@
             if(!currentUser.logs[todayStr]) currentUser.logs[todayStr] = {};
             
             // 2. Beri indikasi loading kepada user agar tahu foto sedang diunggah ke Drive cloud
-            document.getElementById('presenceSuccessMsg').innerHTML = "⏳ Mohon tunggu, foto presensi sedang diunggah ke Google Drive...";
+            document.getElementById('presenceSuccessMsg').innerHTML = "⏳ Mohon tunggu, foto presensi sedang diunggah...";
             document.getElementById('presenceSuccessOverlay').classList.add('active');
 
             // 3. Rangkai nama file unik (Contoh: Presensi_Pagi_ahmad_17181920.jpg)
@@ -1451,7 +1451,7 @@
             recordActivity(currentUser.email, currentUser.nama, `Melakukan Presensi ${type}`);
             
             // 8. Tampilkan overlay sukses final
-            showSuccessOverlay('presenceSuccessOverlay', 'presenceSuccessMsg', `📸 Cekrek! Foto presensi ${type} berhasil terekam dan tersimpan langsung di Google Drive.<br>Watermark otomatis terpasang.`);
+            showSuccessOverlay('presenceSuccessOverlay', 'presenceSuccessMsg', `📸 Foto presensi ${type} berhasil terekam dan tersimpan.<br>Watermark otomatis terpasang.`);
             updateDashboardStats();
         }
 
@@ -1474,7 +1474,7 @@
                 const now = new Date();
                 
                 // Tampilkan loading screen (opsional tapi disarankan)
-                document.getElementById('logbookSuccessMsg').innerHTML = "⏳ Mohon tunggu, dokumen logbook sedang diunggah ke Google Drive...";
+                document.getElementById('logbookSuccessMsg').innerHTML = "⏳ Mohon tunggu, dokumen logbook sedang diunggah...";
                 document.getElementById('logbookSuccessOverlay').classList.add('active');
 
                 // Ekstrak ekstensi & buat nama unik
@@ -1510,7 +1510,7 @@
                 recordActivity(currentUser.email, currentUser.nama, `Mengirim Logbook Harian`);
                 
                 // Tampilkan sukses overlay dengan link file
-                showSuccessOverlay('logbookSuccessOverlay', 'logbookSuccessMsg', `✅ Dokumen Logbook Terekam di Cloud.<br>Lampiran tersimpan: <b>${file.name}</b>`);
+                showSuccessOverlay('logbookSuccessOverlay', 'logbookSuccessMsg', `✅ Data berhasil di unggah.<br>Lampiran tersimpan: <b>${file.name}</b>`);
                 
                 // Reset form
                 document.getElementById('logPemberi').value = ''; 

@@ -2507,14 +2507,8 @@
             if(users.length === 0) tbody.innerHTML = '<tr><td colspan="15" class="text-center">Belum ada data peserta terdaftar.</td></tr>';
         }
 
+
         function loadAdminRiwayat() {
-            let history = [];
-            try {
-                history = JSON.parse(localStorage.getItem('adminActivityHistory') || '[]');
-                if (!Array.isArray(history)) history = [];
-            } catch (e) {
-                history = [];
-            }
             const tbody = document.querySelector('#tableRiwayat tbody'); 
             if(!tbody) return;
             tbody.innerHTML = '';
@@ -2522,6 +2516,7 @@
             let rStartInput = document.getElementById('filterRiwayatStart');
             let rEndInput = document.getElementById('filterRiwayatEnd');
             
+            // Set default filter 6 hari ke belakang jika belum diisi
             if(!rStartInput.value) {
                 let d = new Date(); d.setDate(d.getDate() - 6);
                 const padM = String(d.getMonth()+1).padStart(2,'0'); const padD = String(d.getDate()).padStart(2,'0');
@@ -2531,21 +2526,83 @@
             let rStart = new Date(rStartInput.value); rStart.setHours(0,0,0,0);
             let rEnd = new Date(rEndInput.value); rEnd.setHours(23,59,59,999);
 
-            let filteredHistory = history.map((h, i) => ({...h, originalIndex: i})).filter(h => { let hDate = new Date(h.time); return hDate >= rStart && hDate <= rEnd; });
+            // =========================================================================
+            // BARU: AGREGASI OTOMATIS DATA AKTIVITAS MAHASISWA DARI GOOGLE SHEETS
+            // =========================================================================
+            let history = [];
+            try {
+                const allUsers = getAllUsers();
+                allUsers.forEach(u => {
+                    if (u.logs) {
+                        for (let dateKey in u.logs) {
+                            let log = u.logs[dateKey];
+                            // Bersihkan key tanggal dari tanda petik tunggal (') bawaan Sheets
+                            let cleanDate = dateKey.replace(/'/g, "").trim(); 
+                            
+                            // 1. Cek & Tarik Riwayat Presensi Pagi
+                            if (log.presencePagi || log.fotoPagi) {
+                                let jam = log.waktuPagi || "07:30:00";
+                                history.push({
+                                    time: new Date(`${cleanDate}T${jam.replace(/\./g, ':')}`),
+                                    name: u.nama,
+                                    email: u.email,
+                                    action: "🌅 Presensi Pagi"
+                                });
+                            }
+                            
+                            // 2. Cek & Tarik Riwayat Presensi Sore
+                            if (log.presenceSore || log.fotoSore) {
+                                let jam = log.waktuSore || "16:00:00";
+                                history.push({
+                                    time: new Date(`${cleanDate}T${jam.replace(/\./g, ':')}`),
+                                    name: u.nama,
+                                    email: u.email,
+                                    action: "🌇 Presensi Sore"
+                                });
+                            }
+                            
+                            // 3. Cek & Tarik Riwayat Pengisian Logbook
+                            if (log.logbook) {
+                                let jam = log.waktuLogbook || log.waktuAsli || "16:30:00";
+                                history.push({
+                                    time: new Date(`${cleanDate}T${jam.replace(/\./g, ':')}`),
+                                    name: u.nama,
+                                    email: u.email,
+                                    action: "📝 Mengisi Logbook"
+                                });
+                            }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error("Gagal memproses riwayat aktivitas:", err);
+            }
 
+            // Urutkan riwayat secara kronologis: Dari yang PALING BARU ke yang lama
+            history.sort((a, b) => b.time - a.time);
+
+            // Filter riwayat berdasarkan rentang tanggal yang dipilih Admin
+            let filteredHistory = history.map((h, i) => ({...h, originalIndex: i})).filter(h => { 
+                return h.time >= rStart && h.time <= rEnd; 
+            });
+
+            // Tampilkan maksimal 100 aktivitas terbaru ke tabel
             filteredHistory.slice(0, 100).forEach((h) => {
-                let date = new Date(h.time);
-                let timeStr = isNaN(date.getTime()) ? '-' : date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                let date = h.time;
+                let timeStr = isNaN(date.getTime()) ? '-' : date.toLocaleDateString('id-ID') + ' ' + date.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+                
                 tbody.innerHTML += `<tr>
                     <td><input type="checkbox" class="chk-riwayat" value="${h.originalIndex}"></td>
-                    <td style="color: var(--color-text-muted);">${timeStr}</td>
-                    <td><b>${h.name || '-'}</b> <br><small>${h.email || '-'}</small></td>
-                    <td><span style="background:rgba(15, 82, 186, 0.1); padding:4px 10px; border-radius:10px; font-size:0.85rem;">${h.action || '-'}</span></td>
-                    <td><button class="btn-3d-trash" onclick="hapusRiwayat(${h.originalIndex})" title="Hapus Riwayat"><img src="https://img.icons8.com/3d-fluency/94/waste.png" alt="Hapus"></button></td>
+                    <td style="color: var(--color-text-muted); font-size:0.85rem;">${timeStr} WIB</td>
+                    <td><b>${h.name || '-'}</b> <br><small style="color:var(--color-text-muted);">${h.email || '-'}</small></td>
+                    <td><span style="background:rgba(15, 82, 186, 0.1); color:var(--color-bps-navy); padding:5px 12px; border-radius:10px; font-size:0.8rem; font-weight:700;">${h.action || '-'}</span></td>
+                    <td><button class="btn-3d-trash" onclick="alert('Data ini tersinkron otomatis dari aktivitas cloud mahasiswa.')" title="Info Aktivitas"><img src="https://img.icons8.com/3d-fluency/94/info.png" style="width:18px;" alt="Info"></button></td>
                 </tr>`;
             });
 
-            if(filteredHistory.length === 0) tbody.innerHTML = '<tr><td colspan="5" class="text-center">Tidak ada riwayat aktivitas pada rentang tanggal ini.</td></tr>';
+            if(filteredHistory.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">Tidak ada riwayat aktivitas mahasiswa pada rentang tanggal ini.</td></tr>';
+            }
         }
 
         function toggleDarkMode() {

@@ -1887,26 +1887,31 @@
                 Object.keys(u.logs).sort().forEach(dateStr => {
                     let logDate = new Date(dateStr); let log = u.logs[dateStr];
                     
+                    // ==========================================
+                    // RENDER TABEL PRESENSI INDIVIDU
+                    // ==========================================
                     if(logDate >= pStart && logDate <= pEnd) {
                         if(log.presencePagi || log.presenceSore) {
                             let wHtml = ''; let photoHtml = '';
                             let isPagiLate = log.isPagiLate || isLateStr(log.presencePagi);
                             let isSoreLate = log.isSoreLate || isLateStr(log.presenceSore);
 
+                            // --- PERUBAHAN DI SINI: BUNGKUS WAKTU DENGAN formatWaktuOtomatis ---
                             if(log.presencePagi) {
-                                let labelP = isPagiLate ? `<span style="color:#CC0000; font-weight:bold;">Pagi (${log.presencePagi}) - Terlambat</span>` : `Pagi (${log.presencePagi})`;
+                                let jamPagi = formatWaktuOtomatis(log.presencePagi);
+                                let labelP = isPagiLate ? `<span style="color:#CC0000; font-weight:bold;">Pagi (${jamPagi}) - Terlambat</span>` : `Pagi (${jamPagi})`;
                                 wHtml += `${labelP}<br>`;
                                 photoHtml += `<a href="${log.fotoPagi}" target="_blank" class="btn-action-small" style="background-color:#f8f9fa; color:#333; border:2px solid ${isPagiLate ? '#CC0000' : '#ccc'}; text-decoration:none; padding:4px 8px; border-radius:4px; display:inline-block; margin-bottom:4px;">📸 Lihat Pagi</a>`;
                             }
                             if(log.presenceSore) {
-                                let labelS = isSoreLate ? `<span style="color:#CC0000; font-weight:bold;">Sore (${log.presenceSore}) - Terlambat</span>` : `Sore (${log.presenceSore})`;
+                                let jamSore = formatWaktuOtomatis(log.presenceSore);
+                                let labelS = isSoreLate ? `<span style="color:#CC0000; font-weight:bold;">Sore (${jamSore}) - Terlambat</span>` : `Sore (${jamSore})`;
                                 wHtml += `${labelS}`;
                                 photoHtml += `<a href="${log.fotoSore}" target="_blank" class="btn-action-small" style="background-color:#f8f9fa; color:#333; border:2px solid ${isSoreLate ? '#CC0000' : '#ccc'}; text-decoration:none; padding:4px 8px; border-radius:4px; display:inline-block;">📸 Lihat Sore</a>`;
                             }
+                            // -------------------------------------------------------------------
                             
                             let val = encodeURIComponent(JSON.stringify({email: u.email, date: dateStr}));
-                            
-                            // Menentukan gaya baris merah jika ada keterlambatan presensi (di atas jam 21.00)
                             let rowStyle = (isPagiLate || isSoreLate) ? 'style="background-color: rgba(255, 0, 0, 0.1);"' : '';                            
                             
                             tbodyPres.innerHTML += `<tr>
@@ -1921,11 +1926,18 @@
                         }
                     }
 
+                    // ==========================================
+                    // RENDER TABEL LOGBOOK INDIVIDU
+                    // ==========================================
                     if(logDate >= lStart && logDate <= lEnd && log.logbook) {
                         let lb = log.logbook;
                         let isLbLate = lb.isLate || isLateStr(lb.waktu);
                         let lateStyle = isLbLate ? 'color:#CC0000; font-weight:bold;' : '';
-                        let lateTag = isLbLate ? '<br><span style="color:#CC0000; font-weight:bold; font-size: 0.8rem;">(Terlambat)</span>' : '';
+                        
+                        // --- PERUBAHAN DI SINI: FORMAT WAKTU LOGBOOK ---
+                        let jamLogbook = formatWaktuOtomatis(lb.waktu);
+                        let lateTag = isLbLate ? `<br><span style="color:#CC0000; font-weight:bold; font-size: 0.8rem;">(${jamLogbook} - Terlambat)</span>` : `<br><span style="font-size: 0.8rem;">(${jamLogbook})</span>`;
+                        // -----------------------------------------------
 
                         let docHtml = lb.fileData 
                             ? `<a href="${lb.fileData}" target="_blank" class="btn-action-small ${isLbLate ? 'btn-red' : 'btn-orange'}" style="box-shadow: 0 4px 0 ${isLbLate ? '#B91C1C' : 'var(--color-bps-orange-dark)'}; text-decoration:none; display:inline-block;">👁️ Buka Dokumen</a>`
@@ -1945,7 +1957,7 @@
                 });
             });
 
-            if(tbodyPres.innerHTML === '') tbodyPres.innerHTML = '<tr><td colspan="7" class="text-center">Tidak ada data di rentang tanggal ini.</td></tr>';
+            if(tbodyPres.innerHTML === '') tbodyPres.innerHTML = '<tr><td colspan="8" class="text-center">Tidak ada data di rentang tanggal ini.</td></tr>';
             if(tbodyLog.innerHTML === '') tbodyLog.innerHTML = '<tr><td colspan="8" class="text-center">Tidak ada data di rentang tanggal ini.</td></tr>';
         }
 
@@ -2705,6 +2717,23 @@
             }
 
             return tanggalIndo + waktuIndo;
+        }
+
+        // Fungsi untuk memformat waktu 1899 menjadi HH.mm.ss
+        function formatWaktuOtomatis(timeString) {
+            if (!timeString) return '-';
+            
+            // Deteksi jika formatnya mengandung huruf T (pembatas tanggal/waktu)
+            if (timeString.includes('T')) {
+                // Potong dan ambil bagian waktunya saja: "14:06:41"
+                let timePart = timeString.split('T')[1].split('.')[0]; 
+                
+                // Ubah pemisah titik dua (:) menjadi titik (.) sesuai permintaan Anda
+                return timePart.replace(/:/g, '.'); 
+            }
+            
+            // Jika format sudah normal, kembalikan seperti aslinya
+            return String(timeString).replace(/:/g, '.');
         }
 
     </script>

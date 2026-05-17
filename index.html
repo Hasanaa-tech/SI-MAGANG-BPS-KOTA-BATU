@@ -2467,7 +2467,27 @@
                 history = [];
             }
             
-            const users = getAllUsers();
+            // 1. Ambil data asli seluruh user
+            let users = getAllUsers();
+            
+            // =========================================================================
+            // PERBAIKAN 1: LOGIKA LIVE SEARCH (NAMA, ANGKATAN, INSTANSI)
+            // =========================================================================
+            const searchInput = document.getElementById('searchProfilPeserta');
+            const keyword = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            
+            if (keyword) {
+                users = users.filter(u => {
+                    const name = (u.nama || '').toLowerCase();
+                    const angkatan = (u.angkatan || '').toLowerCase();
+                    const instansi = (u.instansi || '').toLowerCase();
+                    
+                    return name.includes(keyword) || angkatan.includes(keyword) || instansi.includes(keyword);
+                });
+            }
+            // =========================================================================
+
+            // Urutkan data berdasarkan angkatan
             users.sort((a,b) => String(a.angkatan || 'Z').localeCompare(String(b.angkatan || 'Z')));
             const tbody = document.querySelector('#tableProfilPeserta tbody'); 
             if(!tbody) return;
@@ -2479,10 +2499,27 @@
                 if(angkatanVal !== currentGroup) { currentGroup = angkatanVal; colorIndex++; }
                 let cClass = `row-color-${colorIndex % 4}`;
 
-                let hpStr = u.hp ? String(u.hp) : '';
+                // Format No. HP Peserta Magang
+                let hpStr = u.hp ? String(u.hp).trim() : '';
                 let waHp = hpStr ? `<a href="https://wa.me/${hpStr.replace(/^0/, '62').replace(/\D/g, '')}" target="_blank" style="color:var(--color-green-dark); font-weight:900; text-decoration:none; background:rgba(0,208,132,0.1); padding:4px 10px; border-radius:8px; border:2px solid rgba(0,208,132,0.2); display:inline-block;">💬 ${hpStr}</a>` : '-';
                 
-                let waPem = u.waPembimbing ? `<a href="${u.waPembimbing}" target="_blank" style="color:var(--color-bps-orange); font-weight:800;">Klik Chat</a>` : '-';
+                // =========================================================================
+                // PERBAIKAN 2: OTOMATISASI & PENYARINGAN LINK WA PEMBIMBING
+                // =========================================================================
+                let pemStr = u.waPembimbing ? String(u.waPembimbing).trim() : '';
+                let waPem = '-';
+                
+                if (pemStr) {
+                    // Jika admin menginput link utuh (http:// atau https://)
+                    if (pemStr.startsWith('http://') || pemStr.startsWith('https://')) {
+                        waPem = `<a href="${pemStr}" target="_blank" style="color:var(--color-bps-orange); font-weight:800; text-decoration:none; background:rgba(242,101,34,0.1); padding:4px 10px; border-radius:8px; border:2px solid rgba(242,101,34,0.2); display:inline-block;">🔗 Link Chat</a>`;
+                    } else {
+                        // Jika hanya nomor HP biasa, bersihkan karakter dan ubah ke wa.me/62...
+                        let cleanPem = pemStr.replace(/^0/, '62').replace(/\D/g, '');
+                        waPem = `<a href="https://wa.me/${cleanPem}" target="_blank" style="color:var(--color-bps-orange); font-weight:800; text-decoration:none; background:rgba(242,101,34,0.1); padding:4px 10px; border-radius:8px; border:2px solid rgba(242,101,34,0.2); display:inline-block;">💬 Chat</a>`;
+                    }
+                }
+                // =========================================================================
                 
                 let passBtn = `<button class="btn-action-small btn-orange" style="box-shadow: 0 4px 0 var(--color-bps-orange-dark); font-family:monospace;" onclick="openEditProfil('${u.email}')">🔑 ${u.pass || 'Ubah'}</button>`;
 
@@ -2501,7 +2538,7 @@
                         <td style="max-width:200px; white-space:normal;">${u.alamat || '-'}</td> 
                         <td style="white-space:nowrap;">${waHp}</td>
                         <td>${u.pembimbing || '-'}</td>
-                        <td>${waPem}</td>
+                        <td style="white-space:nowrap;">${waPem}</td>
                         <td class="action-cell">
                             <button class="btn-action-small btn-blue" onclick="openEditProfil('${u.email}')">✏️ Edit</button>
                             <button class="btn-3d-trash" onclick="hapusProfil('${u.email}')" title="Hapus Profil Permanen"><img src="https://img.icons8.com/3d-fluency/94/waste.png" alt="Hapus"></button>
@@ -2509,10 +2546,13 @@
                     </tr>
                 `;
             });
-            if(users.length === 0) tbody.innerHTML = '<tr><td colspan="15" class="text-center">Belum ada data peserta terdaftar.</td></tr>';
+            
+            if(users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="15" class="text-center">Data tidak ditemukan / Belum ada data peserta terdaftar.</td></tr>';
+            }
         }
 
-
+        
         function loadAdminRiwayat() {
             const tbody = document.querySelector('#tableRiwayat tbody'); 
             if(!tbody) return;

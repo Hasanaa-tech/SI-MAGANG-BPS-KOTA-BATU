@@ -1634,53 +1634,80 @@
             }
         }
 
-
         function getWorkingDaysAndLogs(user, fStart, fEnd) {
-            let filterStart = new Date(fStart); let filterEnd = new Date(fEnd);
-            let uStart = new Date(user.startDate || '2026-05-01'); let uEnd = new Date(user.endDate || '2026-05-31');
+            // 1. PENCEGAHAN ERROR JIKA TANGGAL FILTER KOSONG
+            let defaultStart = new Date(); defaultStart.setDate(1); // Default: Tanggal 1 bulan ini
+            let defaultEnd = new Date(); // Default: Hari ini
+            
+            let filterStart = fStart ? new Date(fStart) : defaultStart;
+            let filterEnd = fEnd ? new Date(fEnd) : defaultEnd;
+
+            let uStart = user.startDate ? new Date(user.startDate) : filterStart;
+            let uEnd = user.endDate ? new Date(user.endDate) : filterEnd;
 
             let start = filterStart > uStart ? filterStart : uStart;
             let end = filterEnd < uEnd ? filterEnd : uEnd;
             let passed = 0; let loggedP = 0; let loggedL = 0;
 
-            if (start <= end) {
+            if (start <= end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
                 let cur = new Date(start); cur.setHours(0,0,0,0);
                 let endDay = new Date(end); endDay.setHours(0,0,0,0);
 
                 while(cur <= endDay) {
                     let day = cur.getDay();
-                    if(day !== 0 && day !== 6) { 
+                    if(day !== 0 && day !== 6) { // Hitung hari kerja saja (Senin-Jumat)
                         passed++;
-                        const padM = String(cur.getMonth()+1).padStart(2,'0'); const padD = String(cur.getDate()).padStart(2,'0');
-                        const dStr = `${cur.getFullYear()}-${padM}-${padD}`;
                         
-                        // =========================================================================
-                        // SOLUSI: Antisipasi Key Tanggal yang Memiliki Tanda Petik Tunggal (')
-                        // =========================================================================
-                        const dStrWithQuote = `'${dStr}`; 
+                        // Siapkan berbagai kemungkinan format dari Google Sheets
+                        const curYear = cur.getFullYear();
+                        const padM = String(cur.getMonth() + 1).padStart(2, '0');
+                        const padD = String(cur.getDate()).padStart(2, '0');
                         
+                        const f1 = `${curYear}-${padM}-${padD}`; // 2026-05-17
+                        const f2 = `${padD}/${padM}/${curYear}`; // 17/05/2026
+                        const f3 = `${padM}/${padD}/${curYear}`; // 05/17/2026
+
                         let logHariIni = null;
+
+                        // 2. PENCARIAN TANGGAL MODE "SAPU JAGAT"
                         if (user.logs) {
-                            // Cari menggunakan tanggal murni, jika tidak ketemu cari yang pakai tanda petik
-                            logHariIni = user.logs[dStr] || user.logs[dStrWithQuote];
+                            for (let key in user.logs) {
+                                // Bersihkan kunci dari tanda petik atau spasi ekstra
+                                let cleanKey = key.replace(/'/g, "").trim();
+
+                                // Cek apakah kuncinya mengandung salah satu format di atas
+                                if (cleanKey.includes(f1) || cleanKey.includes(f2) || cleanKey.includes(f3)) {
+                                    logHariIni = user.logs[key];
+                                    break;
+                                }
+                                
+                                // Jika masih tidak ketemu, paksa baca sebagai objek Waktu
+                                let keyDate = new Date(cleanKey);
+                                if (!isNaN(keyDate.getTime()) && 
+                                    keyDate.getFullYear() === curYear && 
+                                    keyDate.getMonth() === (cur.getMonth()) && 
+                                    keyDate.getDate() === cur.getDate()) {
+                                    
+                                    logHariIni = user.logs[key];
+                                    break;
+                                }
+                            }
                         }
                         
+                        // 3. HITUNG JIKA DATA DITEMUKAN
                         if (logHariIni) {
-                            // Cek Presensi (Mendukung properti 'presence' maupun 'foto' agar lebih aman)
                             if (logHariIni.presencePagi || logHariIni.presenceSore || logHariIni.fotoPagi || logHariIni.fotoSore) {
                                 loggedP++;
                             }
-                            
-                            // Cek Logbook
                             if (logHariIni.logbook) {
                                 loggedL++;
                             }
                         }
-                        // =========================================================================
                     }
                     cur.setDate(cur.getDate() + 1);
                 }
             }
+            
             return { passed: passed || 1, loggedP, loggedL }; 
         }
 

@@ -1634,6 +1634,7 @@
             }
         }
 
+
         function getWorkingDaysAndLogs(user, fStart, fEnd) {
             let filterStart = new Date(fStart); let filterEnd = new Date(fEnd);
             let uStart = new Date(user.startDate || '2026-05-01'); let uEnd = new Date(user.endDate || '2026-05-31');
@@ -1653,10 +1654,29 @@
                         const padM = String(cur.getMonth()+1).padStart(2,'0'); const padD = String(cur.getDate()).padStart(2,'0');
                         const dStr = `${cur.getFullYear()}-${padM}-${padD}`;
                         
-                        if (user.logs && user.logs[dStr]) {
-                            if (user.logs[dStr].presencePagi || user.logs[dStr].presenceSore) loggedP++;
-                            if (user.logs[dStr].logbook) loggedL++;
+                        // =========================================================================
+                        // SOLUSI: Antisipasi Key Tanggal yang Memiliki Tanda Petik Tunggal (')
+                        // =========================================================================
+                        const dStrWithQuote = `'${dStr}`; 
+                        
+                        let logHariIni = null;
+                        if (user.logs) {
+                            // Cari menggunakan tanggal murni, jika tidak ketemu cari yang pakai tanda petik
+                            logHariIni = user.logs[dStr] || user.logs[dStrWithQuote];
                         }
+                        
+                        if (logHariIni) {
+                            // Cek Presensi (Mendukung properti 'presence' maupun 'foto' agar lebih aman)
+                            if (logHariIni.presencePagi || logHariIni.presenceSore || logHariIni.fotoPagi || logHariIni.fotoSore) {
+                                loggedP++;
+                            }
+                            
+                            // Cek Logbook
+                            if (logHariIni.logbook) {
+                                loggedL++;
+                            }
+                        }
+                        // =========================================================================
                     }
                     cur.setDate(cur.getDate() + 1);
                 }
@@ -2367,21 +2387,38 @@
         }
 
         function openDetailAngkatan(grp) {
-            const tbody = document.querySelector('#tableModalDetailAngkatan tbody'); tbody.innerHTML = '';
+            const tbody = document.querySelector('#tableModalDetailAngkatan tbody'); 
+            tbody.innerHTML = '';
+            
             const fStart = document.getElementById('filterStartDate').value;
             const fEnd = document.getElementById('filterEndDate').value;
             document.getElementById('titleDetailAngkatan').innerText = `Detail Kinerja ${grp} (${fStart} s/d ${fEnd})`;
+            
             const users = getAllUsers().filter(u => (u.angkatan || 'Belum Terdaftar') === grp);
 
             users.forEach(u => {
                 let stats = getWorkingDaysAndLogs(u, fStart, fEnd);
-                let pPct = Math.round((stats.loggedP / stats.passed) * 100);
-                let lPct = Math.round((stats.loggedL / stats.passed) * 100);
+                
+                // =========================================================================
+                // PERBAIKAN BUG 1: Validasi Pembagian Nol (Anti-NaN)
+                // =========================================================================
+                let pPct = 0;
+                let lPct = 0;
+
+                if (stats.passed > 0) {
+                    pPct = Math.round((stats.loggedP / stats.passed) * 100);
+                    lPct = Math.round((stats.loggedL / stats.passed) * 100);
+                }
+
+                // Batasi maksimal 100% jika terjadi kelebihan hitung (anomali data)
+                if (pPct > 100) pPct = 100;
+                if (lPct > 100) lPct = 100;
+                // =========================================================================
                 
                 tbody.innerHTML += `<tr>
                     <td><b>${u.nama}</b><br><small style="color:var(--color-bps-orange); font-weight:800;">${u.nim}</small></td>
-                    <td><span style="background:rgba(0,208,132,0.1); color:var(--color-green-dark); padding:4px 10px; border-radius:8px;">${pPct}% (${stats.loggedP}/${stats.passed} Hari Aktif)</span></td>
-                    <td><span style="background:rgba(15, 82, 186, 0.1); color:var(--color-bps-navy); padding:4px 10px; border-radius:8px;">${lPct}% (${stats.loggedL}/${stats.passed} Hari Aktif)</span></td>
+                    <td><span style="background:rgba(0,208,132,0.1); color:var(--color-green-dark); padding:4px 10px; border-radius:8px;">${pPct}% (${stats.loggedP}/${stats.passed} Hari Kerja)</span></td>
+                    <td><span style="background:rgba(15, 82, 186, 0.1); color:var(--color-bps-navy); padding:4px 10px; border-radius:8px;">${lPct}% (${stats.loggedL}/${stats.passed} Hari Kerja)</span></td>
                 </tr>`;
             });
             

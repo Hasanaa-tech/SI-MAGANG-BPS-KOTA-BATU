@@ -868,6 +868,9 @@
                 <div class="card-pop" style="padding: 20px;" id="cardProfilPeserta">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
                         <h3 style="margin: 0;">Data Registrasi Seluruh Peserta</h3>
+                        <input type="text" id="searchProfilPeserta" class="form-control" placeholder="🔍 Cari nama, angkatan, instansi..." oninput="loadAdminProfil()" style="padding: 8px 15px; border-radius: 10px; width: 280px; font-size: 0.9rem;">
+                    </div>
+
                         <div style="display: flex; gap: 10px;">
                             <button class="btn-pop btn-red btn-action-small" onclick="bulkDeleteProfil()">🗑️ Hapus Terpilih</button>
                             <button class="btn-pop btn-green btn-action-small" onclick="exportToExcelClean('tableProfilPeserta', 'Data_Profil_Peserta')">📥 Excel</button>

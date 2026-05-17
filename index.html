@@ -1312,7 +1312,7 @@
             document.getElementById('profFakultas').innerText = currentUser.fakultas || '-';
             document.getElementById('profInstansi').innerText = currentUser.instansi || '-';
             document.getElementById('profGender').innerText = currentUser.gender || '-';
-            
+
             let hpText = currentUser.hp ? String(currentUser.hp) : '-';
             if (hpText !== '-') {
                 let waUrl = `https://wa.me/${hpText.replace(/^0/, '62').replace(/\D/g, '')}`;
@@ -1323,16 +1323,40 @@
 
             document.getElementById('profEmail').innerText = currentUser.email || '-';
             document.getElementById('profAlamat').innerText = currentUser.alamat || '-';
-            
+
             document.getElementById('profAngkatan').innerText = currentUser.angkatan || 'Belum Ditentukan';
             document.getElementById('profPembimbing').innerText = currentUser.pembimbing || 'Belum Ditentukan';
-            
+
+            // =========================================================================
+            // PERBAIKAN: LOGIKA CERDAS LINK WA PEMBIMBING UNTUK USER
+            // =========================================================================
             const btnWa = document.getElementById('profBtnWa');
-            if(currentUser.waPembimbing) {
-                btnWa.href = currentUser.waPembimbing; btnWa.style.pointerEvents = 'all'; btnWa.style.opacity = '1';
+            let pemStr = currentUser.waPembimbing ? String(currentUser.waPembimbing).trim() : '';
+
+            if (pemStr) {
+                let finalWaUrl = '';
+                
+                // Cek apakah inputan admin berupa link utuh
+                if (pemStr.startsWith('http://') || pemStr.startsWith('https://')) {
+                    finalWaUrl = pemStr; 
+                } else {
+                    // Jika nomor mentah, ubah jadi format wa.me
+                    let cleanPem = pemStr.replace(/^0/, '62').replace(/\D/g, '');
+                    finalWaUrl = `https://wa.me/${cleanPem}`;
+                }
+                
+                // Pasang link yang sudah benar ke tombol user
+                btnWa.href = finalWaUrl; 
+                btnWa.target = '_blank'; // Memastikan terbuka di tab baru
+                btnWa.style.pointerEvents = 'all'; 
+                btnWa.style.opacity = '1';
             } else {
-                btnWa.href = '#'; btnWa.style.pointerEvents = 'none'; btnWa.style.opacity = '0.5';
+                // Jika admin belum mengisi data pembimbing
+                btnWa.href = '#'; 
+                btnWa.style.pointerEvents = 'none'; 
+                btnWa.style.opacity = '0.5';
             }
+            // =========================================================================
 
             const seedStr = encodeURIComponent(currentUser.nama + currentUser.gender);
             document.getElementById('profileAvatarImg').src = `https://api.dicebear.com/8.x/micah/svg?seed=${seedStr}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffdfbf,ffd5dc`;
@@ -2552,7 +2576,7 @@
             }
         }
 
-        
+
         function loadAdminRiwayat() {
             const tbody = document.querySelector('#tableRiwayat tbody'); 
             if(!tbody) return;
